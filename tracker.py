@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import tkinter as tk
+
+# Global variable for category selection
+category_var = None
 
 def get_celestrak_data(category):
     """
@@ -27,22 +31,6 @@ def get_celestrak_data(category):
 
     return objects
 
-def train_passover_classifier(features, labels):
-    """
-    Trains a random forest classifier for predicting passovers.
-
-    Parameters:
-        features (list): List of feature vectors.
-        labels (list): List of binary labels indicating passover events (1 for passover, 0 for no passover).
-
-    Returns:
-        RandomForestClassifier: Trained classifier model.
-    """
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    return model
-
 def visualize_objects(objects):
     """
     Visualizes the objects on a map.
@@ -55,8 +43,15 @@ def visualize_objects(objects):
 
     for obj in objects:
         line2 = obj["line2"].split()
-        inclination = float(line2[2])
-        ascending_node = float(line2[3])
+        if len(line2) < 4:  # Check if line2 has at least 4 elements (including latitude and longitude)
+            continue  # Skip this object if it doesn't have enough elements in line2
+
+        # Check if latitude and longitude can be converted to floats
+        try:
+            inclination = float(line2[2])
+            ascending_node = float(line2[3])
+        except ValueError:
+            continue  # Skip this object if latitude or longitude cannot be converted to float
 
         if inclination < 90:
             latitude = 90 - inclination
@@ -76,33 +71,34 @@ def visualize_objects(objects):
     plt.grid(True)
     plt.show()
 
+def fetch_and_visualize_objects():
+    """
+    Fetches the selected category of objects and visualizes them on a map.
+    """
+    global category_var
+    category = category_var.get()
+    objects = get_celestrak_data(category)
+    visualize_objects(objects)
+
 def main():
-    """
-    Main function to fetch data, train passover classifier, and visualize objects.
-    """
-    # Fetch orbital data for active debris and stations
-    categories = ["active", "stations"]
-    all_objects = []
+    global category_var
 
-    for category in categories:
-        objects = get_celestrak_data(category)
-        all_objects.extend(objects)
+    root = tk.Tk()
+    root.title("Space Debris Tracker")
 
-    print("List of active space debris and satellites:")
-    for obj in all_objects:
-        print(obj["name"])
+    category_label = tk.Label(root, text="Select category:")
+    category_label.pack()
 
-    # Feature engineering and labeling for passover prediction
-    # Assume features and labels are preprocessed accordingly
+    category_var = tk.StringVar()
+    category_var.set("active")  # Default value
 
-    # Train passover classifier
-    passover_classifier = train_passover_classifier(features, labels)
+    category_dropdown = tk.OptionMenu(root, category_var, "active", "stations")
+    category_dropdown.pack()
 
-    # Make predictions for passovers
-    passover_predictions = passover_classifier.predict(features)
+    fetch_button = tk.Button(root, text="Fetch and Visualize Objects", command=fetch_and_visualize_objects)
+    fetch_button.pack()
 
-    # Visualize objects on a map
-    visualize_objects(all_objects)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
