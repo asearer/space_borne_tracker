@@ -1,7 +1,19 @@
 import requests
 import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 def get_celestrak_data(category):
+    """
+    Fetches orbital data from Celestrak API for a given category.
+
+    Parameters:
+        category (str): The category of objects to fetch ("active" or "stations").
+
+    Returns:
+        list: List of dictionaries containing orbital data for objects in the specified category.
+    """
     url = f"https://www.celestrak.com/NORAD/elements/{category}.txt"
     response = requests.get(url)
     data = response.text.splitlines()
@@ -15,14 +27,29 @@ def get_celestrak_data(category):
 
     return objects
 
-def filter_objects(objects, criteria):
-    filtered_objects = []
-    for obj in objects:
-        if criteria in obj["name"].lower():
-            filtered_objects.append(obj)
-    return filtered_objects
+def train_passover_classifier(features, labels):
+    """
+    Trains a random forest classifier for predicting passovers.
+
+    Parameters:
+        features (list): List of feature vectors.
+        labels (list): List of binary labels indicating passover events (1 for passover, 0 for no passover).
+
+    Returns:
+        RandomForestClassifier: Trained classifier model.
+    """
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    return model
 
 def visualize_objects(objects):
+    """
+    Visualizes the objects on a map.
+
+    Parameters:
+        objects (list): List of dictionaries containing orbital data for objects.
+    """
     latitudes = []
     longitudes = []
 
@@ -30,7 +57,6 @@ def visualize_objects(objects):
         line2 = obj["line2"].split()
         inclination = float(line2[2])
         ascending_node = float(line2[3])
-        orbital_period = float(line2[7])
 
         if inclination < 90:
             latitude = 90 - inclination
@@ -51,6 +77,10 @@ def visualize_objects(objects):
     plt.show()
 
 def main():
+    """
+    Main function to fetch data, train passover classifier, and visualize objects.
+    """
+    # Fetch orbital data for active debris and stations
     categories = ["active", "stations"]
     all_objects = []
 
@@ -62,19 +92,17 @@ def main():
     for obj in all_objects:
         print(obj["name"])
 
-    criteria = input("Enter criteria to filter objects (leave blank for no filter): ").lower()
-    filtered_objects = filter_objects(all_objects, criteria)
+    # Feature engineering and labeling for passover prediction
+    # Assume features and labels are preprocessed accordingly
 
-    if filtered_objects:
-        print("\nFiltered objects:")
-        for obj in filtered_objects:
-            print(obj["name"])
-    else:
-        print("\nNo objects found with the given criteria.")
+    # Train passover classifier
+    passover_classifier = train_passover_classifier(features, labels)
 
-    visualize = input("Do you want to visualize the objects on a map? (yes/no): ").lower()
-    if visualize == "yes":
-        visualize_objects(all_objects)
+    # Make predictions for passovers
+    passover_predictions = passover_classifier.predict(features)
+
+    # Visualize objects on a map
+    visualize_objects(all_objects)
 
 if __name__ == "__main__":
     main()
